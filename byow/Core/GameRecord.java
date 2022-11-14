@@ -9,15 +9,14 @@ public class GameRecord {
     private static final String RECORD_FILE_NAME = "game_record.txt";
     private long seed;
     private String inputHistory;
+    private int gameDuration;
+    private boolean end;
 
     public GameRecord() {
         this.seed = 0;
         inputHistory = "";
-    }
-
-    public GameRecord(long seed) {
-        this.seed = seed;
-        inputHistory = "";
+        gameDuration = 0;
+        end = false;
     }
 
     public void setSeed(long seed) {
@@ -28,11 +27,13 @@ public class GameRecord {
         inputHistory += ch;
     }
 
-    public void saveGameRecord() {
+    public void saveGameRecord(int gameDuration, boolean end) {
         try {
             FileWriter writer = new FileWriter(RECORD_FILE_NAME);
             writer.write(String.valueOf(seed) + '\n');
-            writer.write(inputHistory);
+            writer.write(inputHistory + '\n');
+            writer.write(String.valueOf(gameDuration) + '\n');
+            writer.write(String.valueOf(end));
             writer.close();
         } catch (IOException e) {
             e.printStackTrace();
@@ -47,10 +48,16 @@ public class GameRecord {
             }
             Scanner reader = new Scanner(file);
             if (reader.hasNextLong()) {
-                this.seed = reader.nextLong();
+                this.seed = Long.parseLong(reader.nextLine());
             }
             if (reader.hasNext()) {
-                this.inputHistory = reader.next();
+                this.inputHistory = reader.nextLine();
+            }
+            if (reader.hasNextInt()) {
+                this.gameDuration = Integer.parseInt(reader.nextLine());
+            }
+            if (reader.hasNextBoolean()) {
+                this.end = Boolean.parseBoolean(reader.nextLine());
             }
             reader.close();
         } catch (IOException e) {
@@ -67,4 +74,8 @@ public class GameRecord {
     public String getInputHistory() {
         return inputHistory;
     }
+
+    public int getGameDuration() {return gameDuration;}
+
+    public boolean getEnd() {return end;}
 }

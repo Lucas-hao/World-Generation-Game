@@ -13,7 +13,7 @@ public class Room {
     private final int height;
     private final int width;
 
-    /* X and Y represents the right bottom corner position of the room */
+    /* X and Y represents the left bottom corner position of the room */
     private final int cornerX;
     private final int cornerY;
 
@@ -24,42 +24,6 @@ public class Room {
         this.width = w;
         this.cornerX = x;
         this.cornerY = y;
-    }
-
-    public int getHeight() {
-        return height;
-    }
-
-    public int getWidth() {
-        return width;
-    }
-
-    public int getX() {
-        return cornerX;
-    }
-
-    public int getY() {
-        return cornerY;
-    }
-
-    public Position getLightPos() {
-        return lightPos;
-    }
-
-    public int getCenterX() {
-        return cornerX + width / 2;
-    }
-
-    public int getCenterY() {
-        return cornerY + height / 2;
-    }
-
-    public int totalSize() {
-        return height * width;
-    }
-
-    public int innerSize() {
-        return (height - 2) * (width - 2);
     }
 
     public Room findClosestUnConnectedRoom(List<Room> rooms) {
@@ -86,10 +50,15 @@ public class Room {
     }
 
     public Position generateLight(Random r) {
-        int index = RandomUtils.uniform(r, innerSize());
-        this.lightPos = new Position(cornerX + 1 + index % (this.width - 2),
-                cornerY + 1 + index / (this.width - 2));
-        return this.lightPos;
+        lightPos = generatePosition(r);
+        return lightPos;
+    }
+
+    public Position generatePosition(Random r) {
+        // get the idx of the new position in the row-column order
+        int index = RandomUtils.uniform(r, (width - 4) * (height - 4));
+        // width - 4 to avoid the wall and the boundary which could block the road
+        return new Position(cornerX + 2 + index % (width - 4), cornerY + 2 + index / (width - 4));
     }
 
 
@@ -120,4 +89,28 @@ public class Room {
     public boolean isPointInsideRoom(int x, int y) {
         return x > cornerX && y > cornerY && x < cornerX + width - 1 && y < cornerY + height - 1;
     }
+
+
+    /* Getter and setter */
+    public int getHeight() {return height;}
+
+    public int getWidth() {return width;}
+
+    public int getX() {return cornerX;}
+
+    public int getY() {return cornerY;}
+
+    public int getMaxX() {return cornerX + width - 1;}
+
+    public int getMaxY() {return cornerY + height - 1;}
+
+    public Position getLightPos() {return lightPos;}
+
+    public int getCenterX() {return cornerX + width / 2;}
+
+    public int getCenterY() {return cornerY + height / 2;}
+
+    public int totalSize() {return height * width;}
+
+    public int innerSize() {return (height - 2) * (width - 2);}
 }

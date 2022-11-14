@@ -5,12 +5,9 @@ import byow.Input.KeyboardInputSource;
 import byow.Input.StringInputDevice;
 import byow.TileEngine.TERenderer;
 import byow.TileEngine.TETile;
-import byow.TileEngine.Tileset;
 import edu.princeton.cs.algs4.StdDraw;
 
 import java.awt.*;
-import java.util.*;
-import java.util.List;
 
 
 public class Engine {
@@ -36,8 +33,7 @@ public class Engine {
     public static final int WIN_WIDTH = 80;
     public static final int WIN_HEIGHT = 35;
     private boolean enableRendering = false;
-    private boolean partialRendering = false;
-    private int seed;
+    private long seed;
 
     public Engine() {
         ter = new TERenderer();
@@ -89,7 +85,7 @@ public class Engine {
         // to interactWithKeyboard().
         //
         // See proj3.byow.InputDemo for a demo of how you can make a nice clean interface
-        // that works for many different input types.
+        // that works for many input types.
         resetEngine(false);
         InputSource inputSource = new StringInputDevice(input);
         return tick(inputSource);
@@ -113,7 +109,7 @@ public class Engine {
                 case END -> {
                     drawEndGame();
                     if (key == '\n') {
-                        if (this.enableRendering) {
+                        if (enableRendering) {
                             System.exit(0);
                         }
                         return world.getWorld();
@@ -147,12 +143,17 @@ public class Engine {
             }
             case 'L' -> {
                 if (gameRecord.loadGameRecord()) {
-                    this.world.setSeeds(gameRecord.getSeed());
-                    this.world.generateWorld();
-                    Player player = this.world.getPlayer();
-                    assert player != null;
-                    player.moveByHistory(gameRecord.getInputHistory(), this.world);
-                    this.gameState = GameState.GAME;
+                    world.setSeeds(gameRecord.getSeed());
+                    world.generateWorld();
+                    gameState = GameState.GAME;
+                    if (!gameRecord.getEnd()) {
+                        Player player = this.world.getPlayer();
+                        assert player != null;
+                        player.moveByHistory(gameRecord.getInputHistory(), this.world);
+                        world.setGameStartTime(System.currentTimeMillis() - 1000L * gameRecord.getGameDuration());
+                    } else {
+                        world.setGameStartTime(System.currentTimeMillis());
+                    }
                     drawGame(input.getCurrentKey(), true);
                 } else {
                     drawMenu(input.getCurrentKey(), "No game record. Please start a new game");
@@ -160,9 +161,10 @@ public class Engine {
             }
             case 'R' -> {
                 if (gameRecord.loadGameRecord()) {
-                    this.world.setSeeds(gameRecord.getSeed());
-                    this.world.generateWorld();
-                    this.gameState = GameState.GAME;
+                    world.setSeeds(gameRecord.getSeed());
+                    world.generateWorld();
+                    gameState = GameState.GAME;
+                    world.setGameStartTime(System.currentTimeMillis());
                     drawGame(input.getCurrentKey(), true);
                 } else {
                     drawMenu(input.getCurrentKey(), "No game record. Please start a new game");
@@ -182,6 +184,7 @@ public class Engine {
             gameState = GameState.GAME;
             world.setSeeds(seed);
             world.generateWorld();
+            world.setGameStartTime(System.currentTimeMillis());
             gameRecord.setSeed(seed);
             drawGame(input.getCurrentKey(), true);
         } else if (key != '\0') {
@@ -190,15 +193,24 @@ public class Engine {
     }
 
     private void processGameInput(InputSource input, char key) {
-        Player player = this.world.getPlayer();
+        Player player = world.getPlayer();
         if (Player.isPlayerInput(key)) {
+            if (world.getShowMessage()) {
+                world.setShowMessage(false);
+            }
             this.gameRecord.saveKey(key);
             assert player != null;
-            player.playerMove(key, this.world);
-            if (this.world.getNumOfClosedDoors() <= 0) {
+            player.playerMove(key, world);
+            if (world.getGameDuration() > World.TIME_LIMIT) {
+                gameState = GameState.END;
+                gameResult = GameResult.LOSE;
+                gameRecord.saveGameRecord(world.getGameDuration(),true);
+                return;
+            }
+            if (this.world.getNumOfLightsOff() == 0 && this.world.getExitOn()) {
                 this.gameState = GameState.END;
                 this.gameResult = GameResult.WIN;
-                this.gameRecord.saveGameRecord();
+                this.gameRecord.saveGameRecord(world.getGameDuration(), true);
                 return;
             }
         }
@@ -209,7 +221,7 @@ public class Engine {
             }
             case 'Q' -> {
                 if (input.getLastKey() == ':') {
-                    this.gameRecord.saveGameRecord();
+                    this.gameRecord.saveGameRecord(world.getGameDuration(), false);
                     this.gameState = GameState.END;
                     if (this.world.getNumOfClosedDoors() > 0) {
                         this.gameResult = GameResult.LOSE;
@@ -218,7 +230,7 @@ public class Engine {
                 drawGame(input.getCurrentKey(), true);
             }
             case 'E' -> {
-                this.partialRendering = !this.partialRendering;
+                world.togglePartialRendering();
                 drawGame(input.getCurrentKey(), true);
             }
             default -> drawGame(input.getCurrentKey(), true);
@@ -226,13 +238,13 @@ public class Engine {
     }
 
     private void drawInit() {
-        if (this.enableRendering) {
+        if (enableRendering) {
             this.ter.initialize(WIN_WIDTH, WIN_HEIGHT, 0, 0);
         }
     }
 
     private void drawMenu(Character c, String command) {
-        if (!this.enableRendering) {
+        if (!enableRendering) {
             return;
         }
         StdDraw.clear(Color.BLACK);
@@ -242,14 +254,14 @@ public class Engine {
         Font fontTitle = new Font("Monaco", Font.BOLD, 60);
         Font fontMenu = new Font("Monaco", Font.BOLD, 30);
         StdDraw.setFont(fontTitle);
-        StdDraw.text(0.5 * WIN_WIDTH, 0.75 * WIN_HEIGHT, "61B: THE GAME");
+        StdDraw.text(0.5 * WIN_WIDTH, 0.75 * WIN_HEIGHT, "World Generation Adventure");
         // Draw menu series
         StdDraw.setFont(fontMenu);
         // draw input screen
-        StdDraw.text(0.5 * WIN_WIDTH, 5.0 / 10.0 * WIN_HEIGHT, "New Game (N)");
-        StdDraw.text(0.5 * WIN_WIDTH, 4.0 / 10.0 * WIN_HEIGHT, "Load Game (L)");
-        StdDraw.text(0.5 * WIN_WIDTH, 3.0 / 10.0 * WIN_HEIGHT, "Replay (R)");
-        StdDraw.text(0.5 * WIN_WIDTH, 2.0 / 10.0 * WIN_HEIGHT, "Quit (Q)");
+        StdDraw.text(0.5 * WIN_WIDTH, 6.0 / 10.0 * WIN_HEIGHT, "New Game (N)");
+        StdDraw.text(0.5 * WIN_WIDTH, 5.0 / 10.0 * WIN_HEIGHT, "Load Game (L)");
+        StdDraw.text(0.5 * WIN_WIDTH, 4.0 / 10.0 * WIN_HEIGHT, "Replay (R)");
+        StdDraw.text(0.5 * WIN_WIDTH, 3.0 / 10.0 * WIN_HEIGHT, "Quit (Q)");
         // draw the key pressed
         if (c != null && c != '\0') {
             StdDraw.text(0.9 * WIN_WIDTH, 0.9 * WIN_HEIGHT, "Pressed : " + c);
@@ -257,7 +269,8 @@ public class Engine {
 
         // draw the input hint
         if (command != null && !command.isEmpty()) {
-            StdDraw.text(0.5 * WIN_WIDTH, 0.1 * WIN_HEIGHT, command);
+            StdDraw.text(0.5 * WIN_WIDTH, 0.2 * WIN_HEIGHT, command);
+            StdDraw.text(0.5 * WIN_WIDTH, 0.1 * WIN_HEIGHT, "Press 'S' to start");
         }
 
         StdDraw.show();
@@ -267,65 +280,74 @@ public class Engine {
         if (!this.enableRendering) {
             return;
         }
-        if (this.world != null) {
-            Font gameFont = new Font("Monaco", Font.BOLD, TERenderer.TILE_SIZE - 2);
-            StdDraw.setFont(gameFont);
-            if (partialRendering) {
-                Position playerPos = world.getPlayer().getPosition();
-                ter.renderPartialFrame(this.world.getWorld(), playerPos, 4, false);
+        if (world != null) {
+            Position playerPos = world.getPlayer().getPosition();
+            int[][] lightingMap = world.generateLightingMap();
+            if (world.getPartialRendering()) {
+                ter.renderPartialFrame(world, 4, false);
             } else {
-                ter.renderFrame(this.world.getWorld(), false);
-                drawLightings();
+                ter.renderFrame(world.getWorld(), lightingMap, playerPos, false);
             }
         }
-        Font hudFont = new Font("Monaco", Font.BOLD, 16);
+        Font hudFont = new Font("Fira Code", Font.BOLD, 14);
         StdDraw.setFont(hudFont);
         if (key != null && key != '\0') {
             String keyHint = "CurrentKey : " + key;
-            drawText(keyHint, WIN_WIDTH - keyHint.length() / 4.0, WIN_HEIGHT - 0.5,
-                    new Color(0.5f, 0.8f, 0.5f, 0.5f), TextAlign.RIGHT);
+            drawText(keyHint, WIN_HEIGHT - 0.5, new Color(0.5f, 0.8f, 0.5f, 0.5f), TextAlign.RIGHT);
         }
         double x = StdDraw.mouseX();
         double y = StdDraw.mouseY();
         if (world != null && x > 0 && x < World.WIDTH && y > 0 && y < World.HEIGHT) {
-            String description = "Current Tile: "
-                    + world.getWorld()[(int) x][(int) y].description();
-            drawText(description, WIN_WIDTH - description.length() / 4.0, WIN_HEIGHT - 1.5,
-                    new Color(0.6f, 0.7f, 0.8f, 0.5f), TextAlign.RIGHT);
+            String description = "Current Tile: " + world.getWorld()[(int) x][(int) y].description();
+            drawText(description, WIN_HEIGHT - 1.5, new Color(0.6f, 0.7f, 0.8f, 0.5f), TextAlign.RIGHT);
         }
         if (this.world != null) {
             Position playerPosition = this.world.getPlayer().getPosition();
-            String positionHint = String.format("Current Position (%2d, %2d)", playerPosition.x,
-                    playerPosition.y);
-            drawText(positionHint, WIN_WIDTH - positionHint.length() / 4.0, WIN_HEIGHT - 2.5,
-                    new Color(0.7f, 0.5f, 0.3f, 0.5f), TextAlign.RIGHT);
-            int numOfClosedDoors = this.world.getNumOfClosedDoors();
-            String doorHint = String.format("Remaining closed doors : %d", numOfClosedDoors);
-            drawText(doorHint, WIN_WIDTH - doorHint.length() / 4.0, WIN_HEIGHT - 3.5,
-                    new Color(0.8f, 0.6f, 0.8f, 0.5f), TextAlign.RIGHT);
+            String positionHint = String.format("Current Position (%2d, %2d)", playerPosition.x, playerPosition.y);
+            drawText(positionHint, WIN_HEIGHT - 2.5, new Color(0.7f, 0.5f, 0.3f, 0.5f), TextAlign.RIGHT);
+            String doorHint = String.format("Remaining lights off: %d", world.getNumOfLightsOff());
+            drawText(doorHint, WIN_HEIGHT - 3.5, new Color(0.8f, 0.6f, 0.8f, 0.5f), TextAlign.RIGHT);
+            String timeHint = String.format("Remaining time is: %d", world.getRemainingTime());
+            drawText(timeHint, WIN_HEIGHT - 4.5, Color.ORANGE, TextAlign.RIGHT);
+            if (world.getShowMessage()) {
+                drawText("Unable to open the door", WIN_HEIGHT - 0.5, Color.RED, TextAlign.CENTER);
+                drawText("1: Find the key", WIN_HEIGHT - 1.5, Color.ORANGE, TextAlign.CENTER);
+                drawText("2: Turn on all the lights", WIN_HEIGHT - 2.5, Color.GREEN, TextAlign.CENTER);
+            }
         }
-        drawText("Pause (P)", "Pause (P)".length() / 4.0, WIN_HEIGHT - 0.5,
-                new Color(0.4f, 0.2f, 0.9f, 0.5f), TextAlign.LEFT);
-        drawText("Quit and Save (:Q)", "Quit and Save (:Q)".length() / 4.0,
-                WIN_HEIGHT - 1.5, new Color(0.1f, 0.7f, 0.6f, 0.5f), TextAlign.LEFT);
-        drawText("Toggle Partial Rendering (E)", "Toggle Partial Rendering (E)".length() / 4.0,
-                WIN_HEIGHT - 2.5, new Color(0.9f, 0.5f, 0.1f, 0.5f), TextAlign.LEFT);
+        drawText("Pause (P)", WIN_HEIGHT - 0.5, new Color(0.4f, 0.2f, 0.9f, 0.5f), TextAlign.LEFT);
+        drawText("Quit and Save (:Q)", WIN_HEIGHT - 1.5, new Color(0.1f, 0.7f, 0.6f, 0.5f), TextAlign.LEFT);
+        drawText("Toggle Partial Rendering (E)", WIN_HEIGHT - 2.5, new Color(0.9f, 0.5f, 0.1f, 0.5f), TextAlign.LEFT);
         if (isShow) {
             StdDraw.show();
         }
     }
 
-    private void drawText(String toDraw, double x, double y, Color bgColor, TextAlign align) {
+    private void drawText(String toDraw, double y, Color bgColor, TextAlign align) {
         if (!this.enableRendering) {
             return;
         }
-        StdDraw.setPenColor(bgColor);
-        StdDraw.filledRectangle(x, y, toDraw.length() / 4.0, 0.5);
-        StdDraw.setPenColor(Color.WHITE);
+        double halfWidth = 8;
+
         switch (align) {
-            case CENTER -> StdDraw.text(x, y, toDraw);
-            case LEFT -> StdDraw.textLeft(x - toDraw.length() / 4.0, y, toDraw);
-            case RIGHT -> StdDraw.textRight(x + toDraw.length() / 4.0, y, toDraw);
+            case CENTER -> {
+                StdDraw.setPenColor(bgColor);
+                StdDraw.filledRectangle(WIN_WIDTH / 2.0, y, halfWidth, 0.5);
+                StdDraw.setPenColor(Color.WHITE);
+                StdDraw.text(WIN_WIDTH / 2.0, y, toDraw);
+            }
+            case LEFT -> {
+                StdDraw.setPenColor(bgColor);
+                StdDraw.filledRectangle(halfWidth, y, halfWidth, 0.5);
+                StdDraw.setPenColor(Color.WHITE);
+                StdDraw.textLeft(1, y, toDraw);
+            }
+            case RIGHT -> {
+                StdDraw.setPenColor(bgColor);
+                StdDraw.filledRectangle(WIN_WIDTH - halfWidth, y, halfWidth, 0.5);
+                StdDraw.setPenColor(Color.WHITE);
+                StdDraw.textRight(WIN_WIDTH - 1, y, toDraw);
+            }
         }
     }
 
@@ -336,6 +358,8 @@ public class Engine {
         drawGame(key, false);
         Font pauseFont = new Font("Monaco", Font.BOLD, 30);
         StdDraw.setFont(pauseFont);
+        StdDraw.setPenColor(Color.BLACK);
+        StdDraw.filledRectangle(0.5 * WIN_WIDTH, 0.5 * WIN_HEIGHT, 15, 15);
         StdDraw.setPenColor(Color.WHITE);
         StdDraw.text(0.5 * WIN_WIDTH, 0.5 * WIN_HEIGHT, "The Game has Paused!");
         StdDraw.text(0.5 * WIN_WIDTH, 0.6 * WIN_HEIGHT, "Press P to continue the game.");
@@ -354,79 +378,25 @@ public class Engine {
         switch (this.gameResult) {
             case WIN -> {
                 StdDraw.setPenColor(Color.YELLOW);
-                StdDraw.text(0.5 * WIN_WIDTH, 0.5 * WIN_HEIGHT, "Congratulations! YOU WIN!");
+                StdDraw.text(0.5 * WIN_WIDTH, 0.35 * WIN_HEIGHT, "Congratulations! YOU WIN!");
             }
             case LOSE -> {
                 StdDraw.setPenColor(Color.RED);
-                StdDraw.text(0.5 * WIN_WIDTH, 0.5 * WIN_HEIGHT, "Sorry. You Lose.");
+                StdDraw.text(0.5 * WIN_WIDTH, 0.35 * WIN_HEIGHT, "Sorry. You Lose.");
             }
             default -> {}
         }
-        Font hudFont = new Font("Monaco", Font.BOLD, 16);
-        StdDraw.setFont(hudFont);
-        drawText("Quit (Enter)", 0.45 * WIN_WIDTH, 0.6 * WIN_HEIGHT, Color.RED, TextAlign.CENTER);
-        drawText("Restart (R)", 0.55 * WIN_WIDTH, 0.6 * WIN_HEIGHT, Color.GREEN, TextAlign.CENTER);
 
+        Font hudFont = new Font("Monaco", Font.BOLD, 24);
+        StdDraw.setFont(hudFont);
+        StdDraw.setPenColor(new Color(0.8f, 0.2f, 0.0f, 0.5f));
+        StdDraw.filledRectangle(WIN_WIDTH / 2.0, 0.6 * WIN_HEIGHT, 8, 1);
+        StdDraw.setPenColor(Color.WHITE);
+        StdDraw.text(WIN_WIDTH / 2.0, 0.6 * WIN_HEIGHT, "Quit (Enter)");
+        StdDraw.setPenColor(new Color(0.1f, 0.8f, 0.0f, 0.5f));
+        StdDraw.filledRectangle(WIN_WIDTH / 2.0, 0.5 * WIN_HEIGHT, 8, 1);
+        StdDraw.setPenColor(Color.WHITE);
+        StdDraw.text(WIN_WIDTH / 2.0, 0.5 * WIN_HEIGHT, "Restart (R)");
         StdDraw.show();
     }
-
-    private void drawLightings() {
-        List<Position> lightPositions = world.getLightPositions();
-        Set<Position> visited = new HashSet<>();
-        for (Position pos : lightPositions) {
-            if (world.getWorld()[pos.x][pos.y] == Tileset.LIGHT) {
-                Deque<Position> queue = new LinkedList<>();
-                queue.addLast(pos);
-                int depth = 1;
-                while (!queue.isEmpty()) {
-                    List<Position> posList = new ArrayList<>();
-                    while (!queue.isEmpty()) {
-                        posList.add(queue.pollFirst());
-                    }
-                    for (Position lightPos : posList) {
-                        visited.add(lightPos);
-                        StdDraw.setPenColor(
-                                new Color(0.2f / depth, 0.5f / depth, 0.8f / depth, 0.2f));
-                        StdDraw.filledSquare(lightPos.x + 0.5, lightPos.y + 0.5, 0.5);
-                        if (isValidLightingPosition(lightPos.x - 1, lightPos.y, visited)) {
-                            queue.addLast(new Position(lightPos.x - 1, lightPos.y));
-                        }
-                        if (isValidLightingPosition(lightPos.x + 1, lightPos.y, visited)) {
-                            queue.addLast(new Position(lightPos.x + 1, lightPos.y));
-                        }
-                        if (isValidLightingPosition(lightPos.x, lightPos.y - 1, visited)) {
-                            queue.addLast(new Position(lightPos.x, lightPos.y - 1));
-                        }
-                        if (isValidLightingPosition(lightPos.x, lightPos.y + 1, visited)) {
-                            queue.addLast(new Position(lightPos.x, lightPos.y + 1));
-                        }
-                        if (isValidLightingPosition(lightPos.x - 1, lightPos.y + 1, visited)) {
-                            queue.addLast(new Position(lightPos.x - 1, lightPos.y));
-                        }
-                        if (isValidLightingPosition(lightPos.x + 1, lightPos.y + 1, visited)) {
-                            queue.addLast(new Position(lightPos.x + 1, lightPos.y));
-                        }
-                        if (isValidLightingPosition(lightPos.x - 1, lightPos.y - 1, visited)) {
-                            queue.addLast(new Position(lightPos.x - 1, lightPos.y - 1));
-                        }
-                        if (isValidLightingPosition(lightPos.x + 1, lightPos.y - 1, visited)) {
-                            queue.addLast(new Position(lightPos.x + 1, lightPos.y - 1));
-                        }
-                    }
-                    depth++;
-                    if (depth > World.MAX_DEPTH) {
-                        break;
-                    }
-                }
-            }
-        }
-    }
-
-    private boolean isValidLightingPosition(int x, int y, Set<Position> visited) {
-        TETile[][] worldMap = world.getWorld();
-        return world.isValidPosition(x, y) && worldMap[x][y] != Tileset.WALL
-                && worldMap[x][y] != Tileset.LOCKED_DOOR && worldMap[x][y] != Tileset.UNLOCKED_DOOR
-                && !visited.contains(new Position(x, y));
-    }
-
 }

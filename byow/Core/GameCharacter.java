@@ -17,16 +17,16 @@ public abstract class GameCharacter {
             return;
         }
         // update the position
-        world[position.x][position.y] = this.originalTile;
-        this.originalTile = world[x][y];
-        this.position.x = x;
-        this.position.y = y;
+        world[position.x][position.y] = originalTile;
+        originalTile = world[x][y];
+        position.x = x;
+        position.y = y;
         world[position.x][position.y] = figureTile;
     }
 
-    public static boolean isWalkableTile(TETile tile) {
-        return tile.equals(Tileset.FLOOR) || tile.equals(Tileset.GRASS)
-                || tile.equals(Tileset.NOTHING) || tile.equals(Tileset.UNLOCKED_DOOR);
+    public boolean isWalkableTile(TETile tile) {
+        return tile.equals(Tileset.FLOOR) || tile.equals(Tileset.GRASS) || tile.equals(Tileset.NOTHING)
+                || tile.equals(Tileset.UNLOCKED_DOOR);
     }
 
     public TETile getFigureTile() {

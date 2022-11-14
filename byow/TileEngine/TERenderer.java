@@ -1,10 +1,12 @@
 package byow.TileEngine;
 
 import byow.Core.Position;
+import byow.Core.World;
 import edu.princeton.cs.algs4.StdDraw;
 
 import java.awt.Color;
 import java.awt.Font;
+import java.util.List;
 
 /**
  * Utility class for rendering tiles. You do not need to modify this file. You're welcome
@@ -14,6 +16,8 @@ import java.awt.Font;
  */
 public class TERenderer {
     public static final int TILE_SIZE = 16;
+    public static final Font font = new Font("Monaco", Font.BOLD, TILE_SIZE - 2);
+    private static final Color lightColor = new Color(0.3f, 0.0f, 1.0f, 0.4f);
     private int width;
     private int height;
     private int xOffset;
@@ -35,7 +39,6 @@ public class TERenderer {
         this.xOffset = xOff;
         this.yOffset = yOff;
         StdDraw.setCanvasSize(width * TILE_SIZE, height * TILE_SIZE);
-        Font font = new Font("Monaco", Font.BOLD, TILE_SIZE - 2);
         StdDraw.setFont(font);
         StdDraw.setXscale(0, width);
         StdDraw.setYscale(0, height);
@@ -87,44 +90,72 @@ public class TERenderer {
      *
      * @param world the 2D TETile[][] array to render
      */
-    public void renderFrame(TETile[][] world, boolean isShow) {
+    public void renderFrame(TETile[][] world, int[][] lightingMap, Position playerPos, boolean isShow) {
         int numXTiles = world.length;
         int numYTiles = world[0].length;
+        StdDraw.setFont(font);
         StdDraw.clear(new Color(0, 0, 0));
         for (int x = 0; x < numXTiles; x += 1) {
             for (int y = 0; y < numYTiles; y += 1) {
-                if (world[x][y] == null) {
-                    throw new IllegalArgumentException("Tile at position x=" + x + ", y=" + y
-                            + " is null.");
-                }
-                world[x][y].draw(x + xOffset, y + yOffset);
+                renderPosition(world, x, y);
             }
         }
+        renderLighting(lightingMap);
+        world[playerPos.getX()][playerPos.getY()].draw(playerPos.getX() + xOffset, playerPos.getY() + yOffset);
         if (isShow) {
             StdDraw.show();
         }
     }
 
-    public void renderPartialFrame(TETile[][] world, Position center, int radius, boolean isShow) {
+    public void renderPartialFrame(World worldObject, int radius, boolean isShow) {
+        TETile[][] worldMap = worldObject.getWorld();
+        Position playerPos = worldObject.getPlayer().getPosition();
+        List<Position> centers = worldObject.getLightPositions();
+        int[][] lightingMap = worldObject.generateLightingMap();
+        centers.add(playerPos);
+        StdDraw.setFont(font);
         StdDraw.clear(new Color(0, 0, 0));
-        for (int x = center.getX() - radius; x <= center.getX() + radius; x++) {
-            renderPosition(world, x, center.getY());
-        }
-        for (int r = 1; r <= radius; r++) {
-            for (int x = center.getX() - radius + r; x <= center.getX() + radius - r; x++) {
-                renderPosition(world, x, center.getY() + r);
-                renderPosition(world, x, center.getY() - r);
+        for (Position pos : centers) {
+            if (worldMap[pos.getX()][pos.getY()] == Tileset.AVATAR
+                    || worldMap[pos.getX()][pos.getY()] == Tileset.LIGHT) {
+                for (int x = pos.getX() - radius; x <= pos.getX() + radius; x++) {
+                    renderPosition(worldMap, x, pos.getY());
+                }
+                for (int r = 1; r <= radius; r++) {
+                    for (int x = pos.getX() - radius + r; x <= pos.getX() + radius - r; x++) {
+                        renderPosition(worldMap,  x, pos.getY() + r);
+                        renderPosition(worldMap, x, pos.getY() - r);
+                    }
+                }
             }
         }
+        renderLighting(lightingMap);
+        worldMap[playerPos.getX()][playerPos.getY()].draw(playerPos.getX() + xOffset, playerPos.getY() + yOffset);
         if (isShow) {
             StdDraw.show();
+        }
+    }
+
+    private void renderLighting(int[][] lightingMap) {
+        for (int i = 0; i < lightingMap.length; i++) {
+            for (int j = 0; j < lightingMap[0].length; j++) {
+                if (lightingMap[i][j] != 0) {
+                    StdDraw.setPenColor(new Color(1.0f, 1.0f, 0.0f, 0.8f / lightingMap[i][j]));
+                    StdDraw.filledSquare(i + xOffset + 0.5, j + +yOffset + 0.5, 0.5);
+                }
+            }
         }
     }
 
     private void renderPosition(TETile[][] world, int x, int y) {
-        if (x < 0 || x >= world.length || y < 0 || y>= world[0].length) {
+        if (x < 0 || x >= world.length || y < 0 || y >= world[0].length) {
             return;
         }
-        world[x][y].draw(x + xOffset, y + yOffset);
+        if (world[x][y] == null) {
+            throw new IllegalArgumentException("Tile at position x=" + x + ", y=" + y + " is null.");
+        }
+        if (world[x][y] != Tileset.AVATAR) {
+            world[x][y].draw(x + xOffset, y + yOffset);
+        }
     }
 }

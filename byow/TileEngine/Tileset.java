@@ -17,22 +17,19 @@ import java.awt.Color;
  */
 
 public class Tileset {
-    public static final TETile AVATAR = new TETile('@', Color.white, Color.black, "you",
-            "image/kana.jpg");
-    public static final TETile WALL = new TETile('#', new Color(216, 128, 128), Color.darkGray,
-            "wall");
-    public static final TETile FLOOR = new TETile('·', new Color(128, 192, 128), Color.black,
-            "floor");
+    public static final TETile AVATAR = new TETile('@', Color.white, Color.black, "you", "image/kanna.jpg");
+    public static final TETile WALL = new TETile('#', new Color(216, 128, 128), Color.darkGray, "wall");
+    public static final TETile FLOOR = new TETile('·', new Color(128, 192, 128), Color.black, "floor");
     public static final TETile NOTHING = new TETile(' ', Color.black, Color.black, "nothing");
     public static final TETile GRASS = new TETile('"', Color.green, Color.black, "grass");
-    public static final TETile LOCKED_DOOR = new TETile('█', Color.orange, Color.black,
-            "locked door");
-    public static final TETile UNLOCKED_DOOR = new TETile('▢', Color.orange, Color.black,
-            "unlocked door");
-    public static final TETile LIGHT = new TETile('⯌', Color.yellow, Color.black, "light on",
-            "image/lightbulb.png");
-    public static final TETile LIGHT_OFF = new TETile('⯌', Color.white, Color.black, "light off",
-            "image/lightbulb_off.png");
+    public static final TETile LOCKED_DOOR = new TETile('█', Color.orange, Color.black, "locked door");
+    public static final TETile UNLOCKED_DOOR = new TETile('▢', Color.orange, Color.black, "unlocked door");
+    public static final TETile LIGHT = new TETile('⯌', Color.yellow, Color.black, "light on", "image/light_on.png");
+    public static final TETile LIGHT_OFF = new TETile('⯌', Color.white, Color.black, "light off", "image/light_off.png");
+    public static final TETile LOCKED_EXIT = new TETile('█', Color.red, Color.black, "locked exit");
+    public static final TETile UNLOCKED_EXIT = new TETile('▢', Color.red, Color.black, "unlocked exit");
+    public static final TETile KEY = new TETile('>', Color.yellow, Color.black, "Key to the exit");
+
 }
 
 

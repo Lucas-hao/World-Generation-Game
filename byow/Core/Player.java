@@ -4,6 +4,7 @@ import byow.TileEngine.TETile;
 import byow.TileEngine.Tileset;
 
 public class Player extends GameCharacter {
+    private boolean hasKey = false;
 
     public Player(int x, int y, TETile tile) {
         this.figureTile = Tileset.AVATAR;
@@ -20,6 +21,10 @@ public class Player extends GameCharacter {
             case 'F' -> toggleLights(world);
             case ' ' -> toggleDoors(world);
             default -> {}
+        }
+        if (originalTile.equals(Tileset.KEY)) {
+            originalTile = Tileset.FLOOR;
+            hasKey = true;
         }
     }
 
@@ -45,7 +50,15 @@ public class Player extends GameCharacter {
     }
 
     public static boolean isPlayerInput(char key) {
-        return key == 'W' || key == 'S' || key == 'A' || key == 'D'
-                || key == ' ' || key == 'F';
+        return key == 'W' || key == 'S' || key == 'A' || key == 'D' || key == ' ' || key == 'F';
     }
+
+    @Override
+    public boolean isWalkableTile(TETile tile) {
+        return tile.equals(Tileset.FLOOR) || tile.equals(Tileset.GRASS) || tile.equals(Tileset.NOTHING)
+                || tile.equals(Tileset.UNLOCKED_DOOR) || tile.equals(Tileset.KEY);
+    }
+
+    /* Getter and setter */
+    public boolean getHasKey() {return hasKey;}
 }
