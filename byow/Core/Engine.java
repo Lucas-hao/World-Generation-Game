@@ -152,6 +152,7 @@ public class Engine {
                         player.moveByHistory(gameRecord.getInputHistory(), this.world);
                         world.setGameStartTime(System.currentTimeMillis() - 1000L * gameRecord.getGameDuration());
                     } else {
+                        gameRecord.clearRecord();
                         world.setGameStartTime(System.currentTimeMillis());
                     }
                     drawGame(input.getCurrentKey(), true);
@@ -164,6 +165,7 @@ public class Engine {
                     world.setSeeds(gameRecord.getSeed());
                     world.generateWorld();
                     gameState = GameState.GAME;
+                    gameRecord.clearRecord();
                     world.setGameStartTime(System.currentTimeMillis());
                     drawGame(input.getCurrentKey(), true);
                 } else {
@@ -229,10 +231,13 @@ public class Engine {
                 }
                 drawGame(input.getCurrentKey(), true);
             }
+            /*
+            Debugging purpose code
             case 'E' -> {
                 world.togglePartialRendering();
                 drawGame(input.getCurrentKey(), true);
             }
+            */
             default -> drawGame(input.getCurrentKey(), true);
         }
     }
@@ -254,7 +259,7 @@ public class Engine {
         Font fontTitle = new Font("Monaco", Font.BOLD, 60);
         Font fontMenu = new Font("Monaco", Font.BOLD, 30);
         StdDraw.setFont(fontTitle);
-        StdDraw.text(0.5 * WIN_WIDTH, 0.75 * WIN_HEIGHT, "World Generation Adventure");
+        StdDraw.text(0.5 * WIN_WIDTH, 0.75 * WIN_HEIGHT, "World Generation Game");
         // Draw menu series
         StdDraw.setFont(fontMenu);
         // draw input screen
@@ -317,7 +322,8 @@ public class Engine {
         }
         drawText("Pause (P)", WIN_HEIGHT - 0.5, new Color(0.4f, 0.2f, 0.9f, 0.5f), TextAlign.LEFT);
         drawText("Quit and Save (:Q)", WIN_HEIGHT - 1.5, new Color(0.1f, 0.7f, 0.6f, 0.5f), TextAlign.LEFT);
-        drawText("Toggle Partial Rendering (E)", WIN_HEIGHT - 2.5, new Color(0.9f, 0.5f, 0.1f, 0.5f), TextAlign.LEFT);
+        drawText("Toggle lights (F)", WIN_HEIGHT - 2.5, new Color(0.9f, 0.5f, 0.1f, 0.5f), TextAlign.LEFT);
+        drawText("Toggle door (Space)", WIN_HEIGHT - 3.5, new Color(0.8f, 0.8f, 0.3f, 0.5f), TextAlign.LEFT);
         if (isShow) {
             StdDraw.show();
         }

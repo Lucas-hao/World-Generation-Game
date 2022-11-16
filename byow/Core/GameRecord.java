@@ -67,6 +67,12 @@ public class GameRecord {
         return true;
     }
 
+    public void clearRecord() {
+        inputHistory = "";
+        gameDuration = 0;
+        end = false;
+    }
+
     public long getSeed() {
         return seed;
     }
